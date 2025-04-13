@@ -33,7 +33,7 @@ Ikuti langkah-langkah berikut untuk mengatur dan menjalankan Solix Bot:
 2. **Install Dependensi**:
    Jalankan perintah berikut untuk menginstall semua module yang dibutuhkan:
    ```bash
-   npm install axios colors cli-progress cli-table3 gradient-string
+   npm i
    ```
    Module yang akan diinstall:
    - `axios`: Untuk membuat request HTTP ke API SolixDePin.
