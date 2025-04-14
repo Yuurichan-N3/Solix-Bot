@@ -1,1 +1,2 @@
-
+user@example.com|mypassword123
+Hapus semua dan ganti dengan gmail|password kalian
