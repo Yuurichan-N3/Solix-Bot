@@ -123,7 +123,7 @@ async function getNewToken(email, password, headers, retries = 3, delay = 5000) 
   return false;
 }
 
-async function getAllTasks(headers) {
+async function getAllTasks(email, password, headers) {
   try {
     const response = await axios.get(taskListUrl, { headers });
     if (response.status === 200) {
@@ -168,18 +168,36 @@ async function getAllTasks(headers) {
       return [];
     }
   } catch (err) {
+    if (err.response?.status === 401) {
+      addLog(`[${email}] Token expired, mencoba refresh token...`, 'yellow');
+      if (await getNewToken(email, password, headers)) {
+        return await getAllTasks(email, password, headers); // Coba lagi setelah refresh token
+      } else {
+        addLog(`[${email}] Gagal refresh token`, 'red');
+        return [];
+      }
+    }
     addLog(`Error mendapatkan task: ${err.message}`, 'red');
     return [];
   }
 }
 
-async function claimTask(taskId, taskName, headers) {
+async function claimTask(email, password, taskId, taskName, headers) {
   try {
     const payload = { taskId };
     const response = await axios.post(claimTaskUrl, payload, { headers });
     console.log(JSON.stringify(response.data));
     return response.status === 201;
   } catch (err) {
+    if (err.response?.status === 401) {
+      addLog(`[${email}] Token expired saat claim task, mencoba refresh token...`, 'yellow');
+      if (await getNewToken(email, password, headers)) {
+        return await claimTask(email, password, taskId, taskName, headers); // Coba lagi setelah refresh token
+      } else {
+        addLog(`[${email}] Gagal refresh token`, 'red');
+        return false;
+      }
+    }
     console.log(err.response ? JSON.stringify(err.response.data) : 'No response');
     return false;
   }
@@ -201,7 +219,7 @@ async function processAccount(email, password, progressBar) {
   while (true) {
     try {
       // Ambil semua task
-      const newTasks = await getAllTasks(headers);
+      const newTasks = await getAllTasks(email, password, headers);
       if (newTasks.length) {
         addLog(`[${email}] Menemukan ${newTasks.length} task total...`, 'green');
         // Tambahkan tugas baru ke daftar permanen, hindari duplikat
@@ -212,7 +230,7 @@ async function processAccount(email, password, progressBar) {
         });
         // Coba claim tugas baru
         for (const task of newTasks) {
-          await claimTask(task.id, task.name, headers);
+          await claimTask(email, password, task.id, task.name, headers);
         }
       } else {
         addLog(`[${email}] Tidak ada task sama sekali`, 'yellow');
@@ -226,7 +244,7 @@ async function processAccount(email, password, progressBar) {
       if (allKnownTasks.length) {
         addLog(`[${email}] Mencoba claim ulang ${allKnownTasks.length} tugas yang diketahui...`, 'cyan');
         for (const task of allKnownTasks) {
-          await claimTask(task.id, task.name, headers);
+          await claimTask(email, password, task.id, task.name, headers);
         }
       }
 
@@ -349,3 +367,4 @@ async function run() {
 }
 
 run();
+           
